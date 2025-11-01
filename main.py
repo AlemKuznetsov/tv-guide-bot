@@ -7,6 +7,9 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 import random
 import os
+from aiogram import F
+from aiogram import Bot, Dispatcher, types, F
+from aiogram.filters import Command
 
 # === НАСТРОЙКИ ===
 BOT_TOKEN = os.getenv("BOT_TOKEN")  # Токен будет из Render
@@ -65,7 +68,7 @@ async def create_db():
 async def start(message: types.Message):
     await message.answer("Привет! Я — ТВ Гид\nВыбери действие:", reply_markup=main_keyboard)
 
-@dp.message(lambda m: m.text == "Помощь")
+@dp.message(F.text == "Помощь")
 async def help_cmd(message: types.Message):
     await message.answer(
         "*Инструкция:*\n"
@@ -76,7 +79,7 @@ async def help_cmd(message: types.Message):
         parse_mode="Markdown", reply_markup=main_keyboard
     )
 
-@dp.message(lambda m: m.text in ["Сегодня", "Завтра"])
+@dp.message(F.text.in_(["Сегодня", "Завтра"]))
 async def show_day(message: types.Message):
     offset = 0 if message.text == "Сегодня" else 1
     target = (datetime.now().date() + timedelta(days=offset)).strftime("%Y-%m-%d")
@@ -103,14 +106,14 @@ async def show_day(message: types.Message):
         resp += f"  {time} | {title} ({genre})\n"
     await message.answer(resp, parse_mode="Markdown")
 
-@dp.message(lambda m: m.text == "По жанру")
+@dp.message(F.text == "По жанру")
 async def genre_start(message: types.Message):
     kb = InlineKeyboardMarkup(row_width=2)
     for g in ["Фильм", "Сериал", "Новости", "Шоу", "Детское", "Спорт"]:
         kb.add(InlineKeyboardButton(g, callback_data=f"genre_{g}"))
     await message.answer("Выбери жанр:", reply_markup=kb)
 
-@dp.message(lambda m: m.text == "По каналу")
+@dp.message(F.text == "По каналу")
 async def channel_start(message: types.Message):
     kb = InlineKeyboardMarkup(row_width=2)
     async with aiosqlite.connect(DB_NAME) as db:
