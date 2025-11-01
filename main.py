@@ -90,8 +90,8 @@ async def help_cmd(message: types.Message):
     text = (
         "*Инструкция:*\n\n"
         "• *Сегодня / Завтра* — программа на день\n"
-        "• *По жанру* — выбери жанр → день → передачи\n"
-        "• *По каналу* — выбери канал → день → передачи\n"
+        "• *По жанру* — жанр → день → передачи\n"
+        "• *По каналу* — канал → день → передачи\n"
         "• Даты: до +7 дней"
     )
     await message.answer(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
@@ -127,7 +127,7 @@ async def show_day(message: types.Message):
 
     await message.answer(response, parse_mode="Markdown")
 
-# === ПО ЖАНРУ — НОВАЯ ЛОГИКА: ЖАНР → ДНИ → ПРОГРАММА ===
+# === ПО ЖАНРУ: ЖАНР → ДНИ → ПРОГРАММА ===
 @dp.message(F.text == "По жанру")
 async def genre_start(message: types.Message):
     builder = InlineKeyboardBuilder()
