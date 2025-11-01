@@ -90,8 +90,8 @@ async def help_cmd(message: types.Message):
     text = (
         "*Инструкция:*\n\n"
         "• *Сегодня / Завтра* — программа на день\n"
-        "• *По жанру* — выбери жанр\n"
-        "• *По каналу* — выбери канал и день\n"
+        "• *По жанру* — выбери жанр → день → передачи\n"
+        "• *По каналу* — выбери канал → день → передачи\n"
         "• Даты: до +7 дней"
     )
     await message.answer(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
@@ -127,44 +127,59 @@ async def show_day(message: types.Message):
 
     await message.answer(response, parse_mode="Markdown")
 
-# === ПО ЖАНРУ ===
+# === ПО ЖАНРУ — НОВАЯ ЛОГИКА: ЖАНР → ДНИ → ПРОГРАММА ===
 @dp.message(F.text == "По жанру")
 async def genre_start(message: types.Message):
     builder = InlineKeyboardBuilder()
     genres = ["Фильм", "Сериал", "Новости", "Шоу", "Детское", "Спорт"]
     for g in genres:
-        builder.button(text=g, callback_data=f"genre_{g}")
+        builder.button(text=g, callback_data=f"genre_select_{g}")
     builder.adjust(2)
     await message.answer("Выбери жанр:", reply_markup=builder.as_markup())
 
-@dp.callback_query(F.data.startswith("genre_"))
-async def show_genre(callback: types.CallbackQuery):
-    genre = callback.data.split("_", 1)[1]
-    today = datetime.now().date().strftime("%Y-%m-%d")
-    week_later = (datetime.now().date() + timedelta(days=7)).strftime("%Y-%m-%d")
+@dp.callback_query(F.data.startswith("genre_select_"))
+async def genre_days(callback: types.CallbackQuery):
+    genre = callback.data.split("_", 2)[2]
+    builder = InlineKeyboardBuilder()
+    today = datetime.now().date()
+    for i in range(8):
+        day = today + timedelta(days=i)
+        date_str = day.strftime("%Y-%m-%d")
+        display = "Сегодня" if i == 0 else "Завтра" if i == 1 else day.strftime("%d.%m")
+        builder.button(text=display, callback_data=f"genre_day_{genre}_{date_str}")
+    builder.adjust(3)
+    await callback.message.edit_text(
+        f"Выбери день для *{genre}*:",
+        parse_mode="Markdown",
+        reply_markup=builder.as_markup()
+    )
+
+@dp.callback_query(F.data.startswith("genre_day_"))
+async def show_genre_day_program(callback: types.CallbackQuery):
+    _, genre, date = callback.data.split("_", 2)
+    pretty_date = datetime.strptime(date, "%Y-%m-%d").strftime("%d.%m.%Y")
 
     async with aiosqlite.connect(DB_NAME) as db:
         cursor = await db.execute("""
-            SELECT c.name, p.title, p.start_time, p.date
+            SELECT c.name, p.title, p.start_time
             FROM programs p
             JOIN channels c ON p.channel_id = c.id
-            WHERE p.genre = ? AND p.date BETWEEN ? AND ?
-            ORDER BY p.date, p.start_time
-        """, (genre, today, week_later))
+            WHERE p.genre = ? AND p.date = ?
+            ORDER BY p.start_time
+        """, (genre, date))
         rows = await cursor.fetchall()
 
     if not rows:
-        await callback.message.edit_text(f"Нет передач в жанре *{genre}* на этой неделе.", parse_mode="Markdown")
+        await callback.message.edit_text(f"На {pretty_date} в жанре *{genre}* передач нет.", parse_mode="Markdown")
         return
 
-    response = f"*{genre} на этой неделе:*\n\n"
-    for channel, title, time, date in rows:
-        pretty_date = datetime.strptime(date, "%Y-%m-%d").strftime("%d.%m")
-        response += f"{pretty_date} | {channel} | {time} | {title}\n"
+    response = f"*{genre} — {pretty_date}:*\n\n"
+    for channel, title, time in rows:
+        response += f"{channel} | {time} | {title}\n"
 
     await callback.message.edit_text(response, parse_mode="Markdown")
 
-# === ПО КАНАЛУ — ИСПРАВЛЕНО! ===
+# === ПО КАНАЛУ ===
 @dp.message(F.text == "По каналу")
 async def channel_start(message: types.Message):
     builder = InlineKeyboardBuilder()
@@ -173,7 +188,7 @@ async def channel_start(message: types.Message):
         rows = await cursor.fetchall()
         for (name,) in rows:
             builder.button(text=name, callback_data=f"chan_{name}")
-    builder.adjust(2)  # ← ЭТО ДОЛЖНО БЫТЬ ДО as_markup()!
+    builder.adjust(2)
     await message.answer("Выбери канал:", reply_markup=builder.as_markup())
 
 @dp.callback_query(F.data.startswith("chan_"))
