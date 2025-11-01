@@ -1,34 +1,29 @@
 import asyncio
 import aiosqlite
 from datetime import datetime, timedelta
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters import Command
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.utils.keyboard import ReplyKeyboardBuilder
-import random
-import os
-from aiogram import F
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
+from aiogram.types import InlineKeyboardButton
+from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
+import random
+import os
 
 # === НАСТРОЙКИ ===
-BOT_TOKEN = os.getenv("BOT_TOKEN")  # Токен будет из Render
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 DB_NAME = "tv_guide.db"
 
 # === ИНИЦИАЛИЗАЦИЯ ===
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-# === Клавиатура ===
-from aiogram.utils.keyboard import ReplyKeyboardBuilder  # ← Добавь этот импорт в начало файла (после других импортов)
-
+# === Клавиатура (Reply) ===
 builder = ReplyKeyboardBuilder()
 builder.button(text="Сегодня")
 builder.button(text="Завтра")
 builder.button(text="По жанру")
 builder.button(text="По каналу")
 builder.button(text="Помощь")
-builder.adjust(2)  # ← 2 кнопки в ряд
+builder.adjust(2)  # 2 кнопки в ряд
 main_keyboard = builder.as_markup(resize_keyboard=True)
 
 # === Создание БД ===
@@ -108,20 +103,22 @@ async def show_day(message: types.Message):
 
 @dp.message(F.text == "По жанру")
 async def genre_start(message: types.Message):
-    kb = InlineKeyboardMarkup(row_width=2)
+    builder = InlineKeyboardBuilder()
     for g in ["Фильм", "Сериал", "Новости", "Шоу", "Детское", "Спорт"]:
-        kb.add(InlineKeyboardButton(g, callback_data=f"genre_{g}"))
-    await message.answer("Выбери жанр:", reply_markup=kb)
+        builder.button(text=g, callback_data=f"genre_{g}")
+    builder.adjust(2)
+    await message.answer("Выбери жанр:", reply_markup=builder.as_markup())
 
 @dp.message(F.text == "По каналу")
 async def channel_start(message: types.Message):
-    kb = InlineKeyboardMarkup(row_width=2)
+    builder = InlineKeyboardBuilder()
     async with aiosqlite.connect(DB_NAME) as db:
         cursor = await db.execute("SELECT name FROM channels")
         rows = await cursor.fetchall()
         for (name,) in rows:
-            kb.add(InlineKeyboardButton(name, callback_data=f"chan_{name}"))
-    await message.answer("Выбери канал:", reply_markup=kb)
+            builder.button(text=name, callback_data=f"chan_{name}")
+    builder.adjust(2)
+    await message.answer("Выбери канал:", reply_markup=builder.as_markup())
 
 @dp.callback_query(lambda c: c.data.startswith("genre_"))
 async def show_genre(callback: types.CallbackQuery):
@@ -151,14 +148,15 @@ async def show_genre(callback: types.CallbackQuery):
 @dp.callback_query(lambda c: c.data.startswith("chan_"))
 async def show_channel_days(callback: types.CallbackQuery):
     channel = callback.data.split("_", 1)[1]
-    kb = InlineKeyboardMarkup(row_width=3)
+    builder = InlineKeyboardBuilder()
     today = datetime.now().date()
     for i in range(8):
         day = today + timedelta(days=i)
         date_str = day.strftime("%Y-%m-%d")
         name = "Сегодня" if i == 0 else "Завтра" if i == 1 else day.strftime("%d.%m")
-        kb.add(InlineKeyboardButton(name, callback_data=f"day_{channel}_{date_str}"))
-    await callback.message.edit_text(f"День для *{channel}*:", parse_mode="Markdown", reply_markup=kb)
+        builder.button(text=name, callback_data=f"day_{channel}_{date_str}")
+    builder.adjust(3)
+    await callback.message.edit_text(f"День для *{channel}*:", parse_mode="Markdown", reply_markup=builder.as_markup())
 
 @dp.callback_query(lambda c: c.data.startswith("day_"))
 async def show_day_program(callback: types.CallbackQuery):
