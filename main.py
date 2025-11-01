@@ -146,7 +146,8 @@ async def genre_days(callback: types.CallbackQuery):
         day = today + timedelta(days=i)
         date_str = day.strftime("%Y-%m-%d")
         display = "Сегодня" if i == 0 else "Завтра" if i == 1 else day.strftime("%d.%m")
-        builder.button(text=display, callback_data=f"genre_day_{genre}_{date_str}")
+        # ← ИЗМЕНЕНО: gday_ вместо day_
+        builder.button(text=display, callback_data=f"gday_{genre}_{date_str}")
     builder.adjust(3)
     await callback.message.edit_text(
         f"Выбери день для *{genre}*:",
@@ -154,7 +155,7 @@ async def genre_days(callback: types.CallbackQuery):
         reply_markup=builder.as_markup()
     )
 
-@dp.callback_query(F.data.startswith("genre_day_"))
+@dp.callback_query(F.data.startswith("gday_"))
 async def show_genre_day_program(callback: types.CallbackQuery):
     _, genre, date = callback.data.split("_", 2)
     pretty_date = datetime.strptime(date, "%Y-%m-%d").strftime("%d.%m.%Y")
