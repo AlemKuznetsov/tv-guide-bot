@@ -127,7 +127,7 @@ async def show_day(message: types.Message):
 
     await message.answer(response, parse_mode="Markdown")
 
-# === ПО ЖАНРУ: ЖАНР → ДНИ → ПРОГРАММА ===
+# === ПО ЖАНРУ: ЖАНР → ДНИ → ПРОГРАММА (ТОЛЬКО НА ДЕНЬ) ===
 @dp.message(F.text == "По жанру")
 async def genre_start(message: types.Message):
     builder = InlineKeyboardBuilder()
