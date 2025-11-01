@@ -26,7 +26,7 @@ def get_main_keyboard():
     builder.adjust(2)
     return builder.as_markup(resize_keyboard=True)
 
-# === СОЗДАНИЕ БАЗЫ ДАННЫХ ===
+# === СОЗДАНИЕ БД ===
 async def create_db():
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute('''
@@ -46,7 +46,6 @@ async def create_db():
             )
         ''')
 
-        # Очистка и заполнение
         await db.execute("DELETE FROM channels")
         await db.execute("DELETE FROM programs")
 
@@ -165,7 +164,7 @@ async def show_genre(callback: types.CallbackQuery):
 
     await callback.message.edit_text(response, parse_mode="Markdown")
 
-# === ПО КАНАЛУ ===
+# === ПО КАНАЛУ — ИСПРАВЛЕНО! ===
 @dp.message(F.text == "По каналу")
 async def channel_start(message: types.Message):
     builder = InlineKeyboardBuilder()
@@ -174,7 +173,7 @@ async def channel_start(message: types.Message):
         rows = await cursor.fetchall()
         for (name,) in rows:
             builder.button(text=name, callback_data=f"chan_{name}")
-    builder.adjust(2)
+    builder.adjust(2)  # ← ЭТО ДОЛЖНО БЫТЬ ДО as_markup()!
     await message.answer("Выбери канал:", reply_markup=builder.as_markup())
 
 @dp.callback_query(F.data.startswith("chan_"))
