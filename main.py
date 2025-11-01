@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
 import random
 import os
 
@@ -16,10 +17,16 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
 # === Клавиатура ===
-main_keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-main_keyboard.add("Сегодня", "Завтра")
-main_keyboard.add("По жанру", "По каналу")
-main_keyboard.add("Помощь")
+from aiogram.utils.keyboard import ReplyKeyboardBuilder  # ← Добавь этот импорт в начало файла (после других импортов)
+
+builder = ReplyKeyboardBuilder()
+builder.button(text="Сегодня")
+builder.button(text="Завтра")
+builder.button(text="По жанру")
+builder.button(text="По каналу")
+builder.button(text="Помощь")
+builder.adjust(2)  # ← 2 кнопки в ряд
+main_keyboard = builder.as_markup(resize_keyboard=True)
 
 # === Создание БД ===
 async def create_db():
